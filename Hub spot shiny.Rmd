@@ -1,0 +1,89 @@
+---
+title: "Hub spots"
+author: "Connor"
+date: "November 8, 2016"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+This R Markdown document is made interactive using Shiny. Unlike the more traditional workflow of creating static reports, you can now create documents that allow your readers to change the assumptions underlying your analysis and see the results immediately. 
+
+To learn more, see [Interactive Documents](http://rmarkdown.rstudio.com/authoring_shiny.html).
+
+## Inputs and Outputs
+
+You can embed Shiny inputs and outputs in your document. Outputs are automatically updated whenever inputs change.  This demonstrates how a standard R plot can be made interactive by wrapping it in the Shiny `renderPlot` function. The `selectInput` and `sliderInput` functions create the input widgets used to drive the plot.
+
+```{r eruptions, echo=FALSE}
+library(tidyverse)
+library(USAboundaries)
+library(maptools)
+library(sp)
+library(broom)
+library(ggthemes)
+library(broom)
+library(ggplot2)
+
+counties_shp <- us_counties() 
+centroids <- coordinates(counties_shp)
+counties_data <- counties_shp@data %>%
+  mutate(centroidlong = coordinates(counties_shp)[,1]) %>%
+  mutate(centroidlat = coordinates(counties_shp)[,2]) 
+counties_polygon <- tidy(counties_shp, region="geoid")
+counties <- left_join(counties_polygon, counties_data, by=c("id"="geoid"))
+
+
+counties <- counties %>%
+  filter( !state_name %in% c("Alaska", "Hawaii", "Puerto Rico"))
+
+
+inputPanel(
+  sliderInput("long", label = "Longitude",
+              min = -125, max = -66, value = -100, step = 1),
+  
+  sliderInput("lat", label = "Latitude",
+              min = 24, max = 50, value = 40, step = 1)
+)
+
+renderPlot({
+  counties <- counties %>%
+    filter( !state_name %in% c("Alaska", "Hawaii", "Puerto Rico"))
+
+  countydistances <- counties %>%
+    mutate(dist = (sqrt((centroidlong-input$long)^2 + (centroidlat-input$lat)^2)))
+  
+  ggplot(countydistances, aes(x=long, y=lat, group = group, fill = dist)) +
+  geom_polygon() +
+  geom_path(color = "darkslateblue", size = .1)+
+  scale_fill_gradient(low="white", high="darkgreen") + 
+  annotate("point", x=(input$long), y=input$lat, col="violetred2", size=3) +
+  coord_map()
+})
+```
+
+## Embedded Application
+
+It's also possible to embed an entire Shiny application within an R Markdown document using the `shinyAppDir` function. This example embeds a Shiny application located in another directory:
+
+```{r tabsets, echo=FALSE}
+shinyAppDir(
+  system.file("examples/06_tabsets", package = "shiny"),
+  options = list(
+    width = "100%", height = 550
+  )
+)
+```
+
+Note the use of the `height` parameter to determine how much vertical space the embedded application should occupy.
+
+You can also use the `shinyApp` function to define an application inline rather then in an external directory.
+
+In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
+
+
+

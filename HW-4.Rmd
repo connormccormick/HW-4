@@ -1,6 +1,6 @@
 ---
 title: "MATH 216 Homework 4"
-author: "WRITE YOUR NAME HERE"
+author: "Connor"
 output:
   html_document:
     toc: true
@@ -16,6 +16,9 @@ library(USAboundaries)
 library(maptools)
 library(sp)
 library(broom)
+library(ggthemes)
+library(broom)
+library(ggplot2)
 ```
 
 
@@ -24,11 +27,11 @@ library(broom)
 
 Please indicate
 
-* Who you collaborated with:
-* Roughly how much time you spent on this HW so far:
-* The URL of the RPubs published URL [here](https://www.nhl.com/).
-* What gave you the most trouble:
-* Any comments you have:
+* Who you collaborated with: Trisha
+* Roughly how much time you spent on this HW so far: 5
+* The URL of the RPubs published URL [here](http://rpubs.com/connormccormick/hw4).
+* What gave you the most trouble: Calculating the distances because I did not check the website for hints and thought we had to calculate spherical distances. 
+* Any comments you have: How can I shiny app to the bounds of the US besides using the extremes of the coordinates?
 
 
 
@@ -43,27 +46,44 @@ which is marked on the map with a large red dot.
 
 ```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=4.5}
 # Perform your computations here:
+counties_shp <- us_counties() 
+centroids <- coordinates(counties_shp)
+counties_data <- counties_shp@data %>%
+  mutate(centroidlong = coordinates(counties_shp)[,1]) %>%
+  mutate(centroidlat = coordinates(counties_shp)[,2]) 
+counties_polygon <- tidy(counties_shp, region="geoid")
+counties <- left_join(counties_polygon, counties_data, by=c("id"="geoid"))
+
+
+counties <- counties %>%
+  filter( !state_name %in% c("Alaska", "Hawaii", "Puerto Rico"))
+
+countydistances <- counties %>%
+  mutate(dist = (sqrt((centroidlong+85)^2 + (centroidlat-33)^2)))
+
+
+
+
 
 ```
 
 
-```{r, eval=FALSE, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=4.5}
+```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=4.5}
 # Here is a template of a ggplot call; feel free to change this to suit your
 # needs. Once your computations above are complete, set the eval=TRUE on the
 # line above to tell R Markdown to run this code block.
-ggplot(data=geo_data, aes(x=long, y=lat, group=group, fill=distance)) +
-  # Plot choropleth polygons, low -> high being colored white -> dark green
+
+ggplot(countydistances, aes(x=long, y=lat, group = group, fill = dist)) +
   geom_polygon() +
+  geom_path(color = "darkslateblue", size = .1)+
   scale_fill_gradient(low="white", high="darkgreen") + 
-  # Trace outlines of areas
-  geom_path(size=0.1) +
-  # Mark hub
-  annotate("point", x=hub_x_coord, y=hub_y_coord, col="red", size=5) +
-  # Correct aspect ratio for map
+  annotate("point", x=(-85), y=33, col="violetred2", size=3) +
   coord_map()
+
+
 ```
 
-
+I made a shiny app
 
 
 
