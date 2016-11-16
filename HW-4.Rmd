@@ -28,10 +28,10 @@ library(ggplot2)
 Please indicate
 
 * Who you collaborated with: Trisha
-* Roughly how much time you spent on this HW so far: 5
+* Roughly how much time you spent on this HW so far: 8
 * The URL of the RPubs published URL [here](http://rpubs.com/connormccormick/hw4).
-* What gave you the most trouble: Calculating the distances because I did not check the website for hints and thought we had to calculate spherical distances. 
-* Any comments you have: How can I shiny app to the bounds of the US besides using the extremes of the coordinates?
+* What gave you the most trouble: 
+* Any comments you have: Could not figure out how to calculate the centroid of population
 
 
 
@@ -46,42 +46,66 @@ which is marked on the map with a large red dot.
 
 ```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=4.5}
 # Perform your computations here:
+Census2010 <- read_csv("~/Documents/Middlebury/Data Science/HW4/Census2010.csv") %>%
+  select_("Geo_FIPS", "SE_T001_001")
 counties_shp <- us_counties() 
 centroids <- coordinates(counties_shp)
 counties_data <- counties_shp@data %>%
   mutate(centroidlong = coordinates(counties_shp)[,1]) %>%
   mutate(centroidlat = coordinates(counties_shp)[,2]) 
 counties_polygon <- tidy(counties_shp, region="geoid")
-counties <- left_join(counties_polygon, counties_data, by=c("id"="geoid"))
+counties <- left_join(counties_polygon, counties_data, by=c("id"="geoid")) %>%
+  transform(as.character("id"))
+countiescensus <- left_join(counties, Census2010, by=c("id" = "Geo_FIPS"))
 
 
-counties <- counties %>%
-  filter( !state_name %in% c("Alaska", "Hawaii", "Puerto Rico"))
+countiesnew <- countiescensus %>%
+  filter( !state_name %in% c("Alaska", "Hawaii", "Puerto Rico")) %>%
+  mutate(waitcentroidlong = SE_T001_001*centroidlong) %>%
+  mutate(waitcentroidlat = SE_T001_001*centroidlat) 
 
-countydistances <- counties %>%
-  mutate(dist = (sqrt((centroidlong+85)^2 + (centroidlat-33)^2)))
+#latitude
+# countiesweighted <- countiesnew %>%
+#     sum(as.numeric(countiesnew$waitcentroidlat))/sum(as.numeric(countiesnew$SE_T001_001))
+#Longitude
+#   countiesweighted <- countiesnew %>%
+#     filter(!(is.na(SE_T001_001))) %>%
+#     filter(!(is.na(waitcentroidlong))) %>%
+#     filter(!(is.na(centroidlong)))
+#     sum(countiesweighted$waitcentroidlong)/sum(countiesweighted$SE_T001_001)
+
+  
+  
+countydistances <- countiesnew %>%
+  mutate(dist = (sqrt((centroidlong+92.173096)^2 + (centroidlat-37.517534)^2)))
 
 
-
+countydistances <- countydistances %>%
+  mutate(popdist = SE_T001_001/dist)
 
 
 ```
 
 
 ```{r, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=4.5}
-# Here is a template of a ggplot call; feel free to change this to suit your
-# needs. Once your computations above are complete, set the eval=TRUE on the
-# line above to tell R Markdown to run this code block.
 
 ggplot(countydistances, aes(x=long, y=lat, group = group, fill = dist)) +
   geom_polygon() +
   geom_path(color = "darkslateblue", size = .1)+
   scale_fill_gradient(low="white", high="darkgreen") + 
-  annotate("point", x=(-85), y=33, col="violetred2", size=3) +
+  annotate("point", x=(-92.173096), y=37.517534, col="violetred2", size=3) +
+  coord_map()
+
+ggplot(countydistances, aes(x=long, y=lat, group = group, fill = popdist)) +
+  geom_polygon() +
+  geom_path(color = "darkslateblue", size = .1)+
+  scale_fill_gradient(low="white", high="darkgreen") + 
+  annotate("point", x=(-92.173096), y=37.517534, col="violetred2", size=3) +
   coord_map()
 
 
 ```
+The second map takes the population of the county divided by the distance in degrees of longitude/latitude to calculate the closest heavily populated areas.
 
 I made a shiny app
 
